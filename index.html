@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>RSR Scanner - QR Code Reader</title>
+
+<meta name="description" content="RSR Scanner - Fast and secure QR code scanner web app built with HTML, CSS and JavaScript.">
+<meta name="keywords" content="QR scanner, RSR Scanner, QR code reader, online scanner">
+<meta name="author" content="RSR">
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    color: white;
+    text-align: center;
+}
+
+/* Header */
+header {
+    padding: 20px;
+    font-size: 24px;
+    font-weight: bold;
+    animation: fadeIn 1s ease;
+}
+
+.container {
+    max-width: 420px;
+    margin: auto;
+    padding: 10px;
+}
+
+/* Scanner box */
+#reader {
+    margin-top: 15px;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+}
+
+/* Result card */
+.card {
+    margin-top: 20px;
+    background: rgba(255,255,255,0.1);
+    padding: 15px;
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+    animation: slideUp 0.5s ease;
+}
+
+/* Button */
+button {
+    margin-top: 10px;
+    padding: 10px 18px;
+    border: none;
+    border-radius: 25px;
+    background: #00ffcc;
+    color: black;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+button:hover {
+    transform: scale(1.05);
+    background: #00e6b8;
+}
+
+/* Link */
+a {
+    color: #00ffcc;
+    font-weight: bold;
+    word-break: break-all;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {opacity: 0;}
+    to {opacity: 1;}
+}
+
+@keyframes slideUp {
+    from {transform: translateY(20px); opacity: 0;}
+    to {transform: translateY(0); opacity: 1;}
+}
+</style>
+</head>
+
+<body>
+
+<header>📱 RSR Scanner</header>
+
+<div class="container">
+
+    <div id="reader"></div>
+
+    <div class="card">
+        <h3>Scan Result</h3>
+        <div id="result">Scan a QR code...</div>
+
+        <button onclick="copyText()">📋 Copy</button>
+        <button onclick="restart()">🔄 Restart</button>
+    </div>
+
+</div>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<script>
+let lastText = "";
+
+function onScanSuccess(decodedText) {
+    lastText = decodedText;
+    let result = document.getElementById("result");
+
+    if (decodedText.startsWith("http")) {
+        result.innerHTML = `
+            🔗 Link Found:<br><br>
+            <a href="${decodedText}" target="_blank">${decodedText}</a>
+        `;
+    } else {
+        result.innerText = "📦 Data: " + decodedText;
+    }
+}
+
+function copyText() {
+    if (!lastText) return alert("Nothing to copy!");
+    navigator.clipboard.writeText(lastText);
+    alert("Copied!");
+}
+
+function restart() {
+    location.reload();
+}
+
+let scanner = new Html5QrcodeScanner(
+    "reader",
+    { fps: 10, qrbox: 250 }
+);
+
+scanner.render(onScanSuccess);
+</script>
+
+</body>
+</html>
