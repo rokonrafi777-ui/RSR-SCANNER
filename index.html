@@ -3,87 +3,120 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>RSR Scanner - Free QR Code Reader Online</title>
-
-<meta name="description" content="RSR Scanner - Fast and secure QR code scanner web app built with HTML, CSS and JavaScript.">
-<meta name="keywords" content="QR scanner, RSR Scanner, QR code reader, online scanner,free qr code scan, qr code website,">
-<meta name="author" content="RSR">
+<title>RSR Scanner</title>
 
 <style>
 body {
     margin: 0;
     font-family: Arial, sans-serif;
-    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    background: radial-gradient(circle at top, #1b2a41, #0f172a);
     color: white;
     text-align: center;
 }
 
-/* Header */
+/* HEADER */
 header {
-    padding: 20px;
-    font-size: 24px;
+    padding: 18px;
+    font-size: 28px;
     font-weight: bold;
-    animation: fadeIn 1s ease;
 }
 
-.container {
-    max-width: 420px;
-    margin: auto;
-    padding: 10px;
+/* MODE BOX */
+.mode-box {
+    margin: 10px auto;
+    width: 240px;
+    padding: 15px;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.08);
+    backdrop-filter: blur(10px);
 }
 
-/* Scanner box */
+.mode-icon {
+    font-size: 50px;
+}
+
+.mode-text {
+    font-size: 14px;
+    opacity: 0.85;
+}
+
+/* TABS */
+.tabs {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+.tab {
+    padding: 10px 18px;
+    margin: 5px;
+    border-radius: 20px;
+    cursor: pointer;
+    background: rgba(255,255,255,0.1);
+    font-weight: bold;
+    transition: 0.2s;
+}
+
+.tab.active {
+    background: #00ffcc;
+    color: black;
+    transform: scale(1.05);
+}
+
+/* SCANNER */
 #reader {
-    margin-top: 15px;
+    margin: 15px auto;
+    width: 340px;
     border-radius: 15px;
     overflow: hidden;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.4);
 }
 
-/* Result card */
+/* CARD */
 .card {
-    margin-top: 20px;
-    background: rgba(255,255,255,0.1);
+    margin-top: 15px;
+    background: rgba(255,255,255,0.07);
     padding: 15px;
     border-radius: 15px;
-    backdrop-filter: blur(10px);
-    animation: slideUp 0.5s ease;
+    width: 340px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
-/* Button */
+/* BUTTONS */
 button {
-    margin-top: 10px;
-    padding: 10px 18px;
+    margin: 5px;
+    padding: 10px 15px;
     border: none;
-    border-radius: 25px;
+    border-radius: 20px;
     background: #00ffcc;
     color: black;
     font-weight: bold;
     cursor: pointer;
-    transition: 0.3s;
 }
 
-button:hover {
-    transform: scale(1.05);
-    background: #00e6b8;
-}
-
-/* Link */
+/* LINK */
 a {
     color: #00ffcc;
-    font-weight: bold;
     word-break: break-all;
 }
 
-/* Animations */
-@keyframes fadeIn {
-    from {opacity: 0;}
-    to {opacity: 1;}
+/* 🔥 TOAST POPUP */
+.toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    background: rgba(0,0,0,0.9);
+    padding: 12px 18px;
+    border-radius: 12px;
+    opacity: 0;
+    transition: 0.3s;
+    z-index: 9999;
 }
 
-@keyframes slideUp {
-    from {transform: translateY(20px); opacity: 0;}
-    to {transform: translateY(0); opacity: 1;}
+.toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
 }
 </style>
 </head>
@@ -92,55 +125,164 @@ a {
 
 <header>📱 RSR Scanner</header>
 
-<div class="container">
-
-    <div id="reader"></div>
-
-    <div class="card">
-        <h3>Scan Result</h3>
-        <div id="result">Scan a QR code...</div>
-
-        <button onclick="copyText()">📋 Copy</button>
-        <button onclick="restart()">🔄 Restart</button>
-    </div>
-
+<div class="mode-box">
+    <div class="mode-icon" id="modeIcon">📷</div>
+    <div class="mode-text" id="modeText">QR CODE SCANNER</div>
 </div>
+
+<div class="tabs">
+    <div class="tab active" id="qrTab" onclick="setMode('qr')">QR Code</div>
+    <div class="tab" id="barcodeTab" onclick="setMode('barcode')">Barcode</div>
+</div>
+
+<div id="reader"></div>
+
+<div class="card">
+    <h3>Scan Result</h3>
+    <div id="result">Waiting...</div>
+
+    <button onclick="copyText()">📋 Copy</button>
+    <button onclick="clearAll()">🗑 Clear</button>
+</div>
+
+<div id="toast" class="toast"></div>
 
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <script>
+let scanner;
+let mode = "qr";
 let lastText = "";
+let scanLocked = false;
 
+/* START */
+function startScanner() {
+    scanner = new Html5QrcodeScanner(
+        "reader",
+        { fps: 10, qrbox: 250 },
+        false
+    );
+
+    scanner.render(onScanSuccess);
+}
+
+/* 🔥 MAIN SCAN LOGIC */
 function onScanSuccess(decodedText) {
-    lastText = decodedText;
-    let result = document.getElementById("result");
 
-    if (decodedText.startsWith("http")) {
-        result.innerHTML = `
-            🔗 Link Found:<br><br>
-            <a href="${decodedText}" target="_blank">${decodedText}</a>
-        `;
-    } else {
-        result.innerText = "📦 Data: " + decodedText;
+    if (scanLocked) return;
+
+    let isBarcode = /^[0-9]{6,}$/.test(decodedText);
+
+    // ❌ WRONG SCAN (QR MODE)
+    if (mode === "qr" && isBarcode) {
+        handleWrongScan("📊 Barcode not allowed in QR mode");
+        return;
+    }
+
+    // ❌ WRONG SCAN (BARCODE MODE)
+    if (mode === "barcode" && !isBarcode) {
+        handleWrongScan("📷 QR Code not allowed in Barcode mode");
+        return;
+    }
+
+    // ✅ VALID SCAN
+    scanLocked = true;
+    showResult(decodedText);
+
+    setTimeout(() => {
+        scanLocked = false;
+    }, 3000);
+}
+
+/* 🔥 WRONG SCAN FIX (FULL RESET) */
+function handleWrongScan(msg) {
+
+    scanLocked = true;
+
+    showToast(msg);
+
+    if (scanner) {
+        scanner.clear().then(() => {
+            document.getElementById("reader").innerHTML = "";
+
+            setTimeout(() => {
+                startScanner();
+                scanLocked = false;
+            }, 1200);
+        });
     }
 }
 
+/* SHOW RESULT */
+function showResult(text) {
+    lastText = text;
+
+    document.getElementById("result").innerHTML =
+        text.startsWith("http")
+        ? `<a href="${text}" target="_blank">${text}</a>`
+        : "📦 " + text;
+
+    showToast("✅ Scan Successful");
+}
+
+/* TOAST */
+function showToast(msg) {
+    let toast = document.getElementById("toast");
+    toast.innerText = msg;
+    toast.classList.add("show");
+
+    setTimeout(() => {
+        toast.classList.remove("show");
+    }, 2000);
+}
+
+/* MODE SWITCH */
+function setMode(m) {
+    mode = m;
+
+    document.getElementById("qrTab").classList.remove("active");
+    document.getElementById("barcodeTab").classList.remove("active");
+
+    if (m === "qr") {
+        document.getElementById("qrTab").classList.add("active");
+        document.getElementById("modeIcon").innerText = "📷";
+        document.getElementById("modeText").innerText = "QR CODE SCANNER";
+    } else {
+        document.getElementById("barcodeTab").classList.add("active");
+        document.getElementById("modeIcon").innerText = "📊";
+        document.getElementById("modeText").innerText = "BARCODE SCANNER";
+    }
+
+    resetScanner();
+}
+
+/* RESET SCANNER */
+function resetScanner() {
+    if (scanner) {
+        scanner.clear().then(() => {
+            document.getElementById("reader").innerHTML = "";
+            startScanner();
+        });
+    }
+}
+
+/* COPY */
 function copyText() {
-    if (!lastText) return alert("Nothing to copy!");
+    if (!lastText) return showToast("Nothing to copy!");
     navigator.clipboard.writeText(lastText);
-    alert("Copied!");
+    showToast("📋 Copied!");
 }
 
-function restart() {
-    location.reload();
+/* CLEAR */
+function clearAll() {
+    lastText = "";
+    document.getElementById("result").innerText = "Waiting...";
+    resetScanner();
+    showToast("🗑 Cleared");
 }
 
-let scanner = new Html5QrcodeScanner(
-    "reader",
-    { fps: 10, qrbox: 250 }
-);
-
-scanner.render(onScanSuccess);
+/* INIT */
+startScanner();
 </script>
 
 </body>
